@@ -10,21 +10,29 @@ function TabularResult() {
   const previousIdsRef = useRef(new Set());
   const API_URL = import.meta.env.VITE_API_URL;
 
-  useEffect(() => {
-    const fetchData = () => {
-      fetch(`${API_URL}/history`)
-        .then((res) => res.json())
-        .then((result) => {
-          setData(result);
-          setLoading(false);
-        })
-        .catch(() => setLoading(false));
-    };
+useEffect(() => {
+  const controller = new AbortController();
 
-    fetchData();
-    const interval = setInterval(fetchData, 5000);
-    return () => clearInterval(interval);
-  }, []);
+  const fetchData = async () => {
+    try {
+      const res = await fetch(`${API_URL}/history`, {
+        signal: controller.signal,
+      });
+      const result = await res.json();
+      setData(result);
+      setLoading(false);
+    } catch {}
+  };
+
+  fetchData();
+  const interval = setInterval(fetchData, 15000);
+
+  return () => {
+    controller.abort();
+    clearInterval(interval);
+  };
+}, [API_URL]);
+
 
   const downloadCSV = () => {
     if (!fromTime || !toTime) {

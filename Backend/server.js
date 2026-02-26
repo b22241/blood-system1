@@ -5,13 +5,14 @@ const express = require("express");
 const cors = require("cors");
 const connectToDb = require("./DB/db");
 const SensorData = require("./models/SensorData");
-
+const compression = require("compression");
 
 const app = express();
 
 // 🔥 MIDDLEWARE
 app.use(cors());
 app.use(express.json());
+app.use(compression());
 
 const PORT = process.env.PORT || 5000;
 const API_KEY = process.env.API_KEY;
@@ -83,16 +84,13 @@ app.get("/history", async (req, res) => {
   try {
     const data = await SensorData.find()
       .sort({ createdAt: -1 })
-      .limit(20);
+      .limit(20)
+      .lean();
 
     res.json(data);
   } catch {
     res.status(500).json({ error: "Failed to fetch history" });
   }
-});
-
-app.get("/health", (req,res)=>{
-  res.send("OK");
 });
 
 
