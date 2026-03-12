@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import TempChart from "../components/TempChart";
 import HumidityChart from "../components/HumidityChart";
 
+
 function Dashboard() {
   const [history, setHistory] = useState([]);
   const [error, setError] = useState(null);
