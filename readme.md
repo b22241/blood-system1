@@ -297,10 +297,6 @@ API_KEY=your_secret_api_key
 VITE_API_URL=http://YOUR_EC2_IP:5000
 ```
 
-> ⚠️ Never push `.env` files to GitHub. Both are listed in `.gitignore`.
-
----
-
 ## 🔄 CI/CD Pipeline
 
 Every time you push code to the `main` branch, GitHub Actions automatically:
