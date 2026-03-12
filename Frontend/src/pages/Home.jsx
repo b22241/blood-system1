@@ -5,7 +5,7 @@ function Home() {
       {/* Title Section */}
       <div className="max-w-4xl mx-auto text-center mb-12">
         <h1 className="text-4xl font-bold text-indigo-700 mb-3">
-          🩸Smart Blood and Vaccine Transport Monitoring System
+          Smart Blood and Vaccine Transport Monitoring System
         </h1>
         <p className="text-lg text-gray-600">
           Real-time cold-chain monitoring for safe and reliable blood transportation
