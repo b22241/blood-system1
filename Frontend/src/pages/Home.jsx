@@ -27,7 +27,7 @@ function Home() {
 
         <div className="bg-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all duration-300">
           <h3 className="text-xl font-semibold text-indigo-700 mb-3">
-            💧 Humidity Tracking
+             Humidity Tracking
           </h3>
           <p className="text-gray-600">
             Monitors humidity levels inside and outside the container to
