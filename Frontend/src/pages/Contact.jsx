@@ -56,7 +56,7 @@ function Contact() {
             📍 Location
           </h3>
           <p className="text-gray-700">IIT Mandi</p>
-          <p className="text-gray-700">Himachal Pradesh, India</p>
+          <p className="text-gray-700">Mandi,Himachal Pradesh, India</p>
         </div>
 
       </div>
