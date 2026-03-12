@@ -5,7 +5,7 @@ function Research() {
       {/* Header */}
       <div className="max-w-5xl mx-auto mb-12 text-center">
         <h1 className="text-4xl font-bold text-indigo-700 mb-3">
-          📘 Research Work
+           Research Work
         </h1>
         <p className="text-lg text-gray-600">
           Study and implementation of a real-time blood transport monitoring system
