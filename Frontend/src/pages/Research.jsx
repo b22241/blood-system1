@@ -15,7 +15,7 @@ function Research() {
       <div className="max-w-5xl mx-auto space-y-8">
 
         {/* Section */}
-        <Section title="🧠 Problem Statement">
+        <Section title="🧠 Problem Statements">
           <p>
             Blood and blood components must be transported under strict
             temperature-controlled conditions (2–6 °C). Any deviation from this
