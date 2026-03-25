@@ -18,7 +18,7 @@ function Research() {
         <Section title="🧠 Problem Statements">
           <p>
             Blood and blood components must be transported under strict
-            temperature-controlled conditions (2–6 °C). Any deviation from this
+            temperature-controlled conditions (2-6 °C). Any deviation from this
             range can compromise blood quality, leading to wastage and potential
             health risks. Existing transport systems often lack real-time
             monitoring, alerts, and traceability.

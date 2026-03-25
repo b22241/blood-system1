@@ -28,7 +28,7 @@ function Contact() {
         {/* Email Card */}
         <div className="group bg-white/80 backdrop-blur-lg p-6 rounded-2xl shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300">
           <h3 className="text-xl font-semibold text-indigo-700 mb-4">
-            📧 Email
+            📧 Email Id:
           </h3>
           <p className="text-gray-700">
             <b>Primary:</b>{" "}
