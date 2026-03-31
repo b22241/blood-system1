@@ -133,7 +133,7 @@ app.get("/predict", async (req, res) => {
 
     // Generate predictions for next 30 horizons (5 minutes)
     const predictions = [];
-    for (let h = 1; h <= 30; h++) {
+    for (let h = 1; h <= 31; h++) {
       predictions.push({
         horizon:       h,
         seconds:       h * 10,
