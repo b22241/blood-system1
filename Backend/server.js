@@ -96,19 +96,28 @@ app.get("/history", async (req, res) => {
 // Predict next 5 minutes (30 horizons × 10sec = 300seccod)
 app.get("/predict", async (req, res) => {
   try {
+    // Step 1: Get last 5 readings from MongoDB (newest first)
     const data = await SensorData.find()
       .sort({ createdAt: -1 })
       .limit(5);
 
+    // Step 2: Need at least 2 readings to calculate trend
     if (data.length < 2) {
       return res.status(400).json({ error: "Not enough data to predict" });
     }
 
+    // Step 3: Reverse to chronological order (oldest → newest)
     data.reverse();
 
-    const rawTemps = data.map(d => d.tempInside);
-    const rawHums  = data.map(d => d.humidityInside);
+    // Step 4: Extract raw values
+    // Temperature unit: Celsius (°C)
+    // Humidity unit: Relative Humidity (% RH)
+    const rawTemps = data.map(d => d.tempInside);   // °C
+    const rawHums  = data.map(d => d.humidityInside); // % RH
 
+    // Step 5: Apply rolling mean smoothing
+    // Temp: window=3 (less smoothing — temp changes faster)
+    // Humidity: window=5 (more smoothing — humidity changes slowly)
     const smooth = (arr, window) =>
       arr.map((_, i) => {
         const slice = arr.slice(Math.max(0, i - window + 1), i + 1);
@@ -118,28 +127,45 @@ app.get("/predict", async (req, res) => {
     const smoothedTemps = smooth(rawTemps, 3);
     const smoothedHums  = smooth(rawHums, 5);
 
-    const currTemp = smoothedTemps[smoothedTemps.length - 1];
-    const prevTemp = smoothedTemps[smoothedTemps.length - 2];
-    const diffTemp = currTemp - prevTemp;
+    // Step 6: Calculate derivative (rate of change per 10 seconds)
+    // diff = current - previous = how much it changed in last 10 seconds
+    const currTemp = smoothedTemps[smoothedTemps.length - 1]; // °C
+    const prevTemp = smoothedTemps[smoothedTemps.length - 2]; // °C
+    const diffTemp = currTemp - prevTemp; // °C per 10 seconds
 
-    const currHum = smoothedHums[smoothedHums.length - 1];
-    const prevHum = smoothedHums[smoothedHums.length - 2];
-    const diffHum = currHum - prevHum;
+    const currHum = smoothedHums[smoothedHums.length - 1]; // % RH
+    const prevHum = smoothedHums[smoothedHums.length - 2]; // % RH
+    const diffHum = currHum - prevHum; // % RH per 10 seconds
 
+    // Step 7: Generate 30 predictions (h=1 to h=30)
+    // Formula: predicted = current + (rate_of_change × horizon)
     const predictions = [];
     for (let h = 1; h <= 30; h++) {
+      const predTemp = parseFloat((currTemp + diffTemp * h).toFixed(2));
+      const predHum  = parseFloat((currHum  + diffHum  * h).toFixed(2));
+
       predictions.push({
         horizon:       h,
         seconds:       h * 10,
         label:         `+${h * 10}s`,
-        predictedTemp: parseFloat((currTemp + diffTemp * h).toFixed(2)),
-        predictedHum:  parseFloat((currHum  + diffHum  * h).toFixed(2)),
+        predictedTemp: predTemp,        // unit: °C
+        predictedHum:  Math.min(        // unit: % RH (capped 0–100)
+          100, Math.max(0, predHum)
+        ),
       });
     }
 
     res.json({
-      currentTemp: parseFloat(currTemp.toFixed(2)),
-      currentHum:  parseFloat(currHum.toFixed(2)),
+      units: {
+        temperature: "Celsius (°C)",
+        humidity:    "Relative Humidity (% RH)"
+      },
+      currentTemp: parseFloat(currTemp.toFixed(2)), // °C
+      currentHum:  parseFloat(currHum.toFixed(2)),  // % RH
+      rateOfChange: {
+        tempPer10sec: parseFloat(diffTemp.toFixed(3)), // °C per 10s
+        humPer10sec:  parseFloat(diffHum.toFixed(3)),  // % RH per 10s
+      },
       predictions
     });
 
@@ -148,7 +174,6 @@ app.get("/predict", async (req, res) => {
     res.status(500).json({ error: "Prediction failed" });
   }
 });
-
 
 /* ======================
    START SERVER
