@@ -110,7 +110,7 @@ function Dashboard() {
             padding: "12px", borderRadius: "6px",
             marginBottom: "15px", fontWeight: "bold"
           }}>
-            🔮 Prediction: Temperature expected to stay in safe range for next 5 minutes
+             Prediction: Temperature expected to stay in safe range for next 5 minutes
           </div>
         )
       )}
