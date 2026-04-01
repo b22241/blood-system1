@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import TempChart from "../components/TempChart";
-import HumidityChart from "../components/HumidityChart";
 import {
   LineChart, Line, XAxis, YAxis,
   CartesianGrid, Tooltip, Legend,
@@ -11,8 +10,6 @@ function Dashboard() {
   const [history, setHistory] = useState([]);
   const [error, setError] = useState(null);
   const [hasAlert, setHasAlert] = useState(false);
-  const [latestTemp, setLatestTemp] = useState(null);
-  const [lastUpdated, setLastUpdated] = useState(null);
   const [predictions, setPredictions] = useState([]);
   const [currentPredTemp, setCurrentPredTemp] = useState(null);
   const API_URL = import.meta.env.VITE_API_URL;
@@ -33,18 +30,13 @@ function Dashboard() {
       const res = await fetch(`${API_URL}/history`);
       const historyData = await res.json();
       setHistory(historyData);
-
       if (historyData.length > 0) {
-        const latest = historyData.reduce((latest, item) =>
-          new Date(item.createdAt) > new Date(latest.createdAt) ? item : latest
+        const latest = historyData.reduce((a, b) =>
+          new Date(a.createdAt) > new Date(b.createdAt) ? a : b
         );
-        setLatestTemp(latest.tempInside);
-        setLastUpdated(latest.createdAt);
         setHasAlert(latest.tempInside < 2 || latest.tempInside > 6);
       } else {
         setHasAlert(false);
-        setLatestTemp(null);
-        setLastUpdated(null);
       }
     } catch (err) {
       setError(err.message);
@@ -61,177 +53,157 @@ function Dashboard() {
     return () => clearInterval(interval);
   }, []);
 
-  // predicted temp at +5 min (horizon 30)
   const predAt5Min = predictions.length > 0
     ? predictions[predictions.length - 1].predictedTemp
     : null;
 
-  // check if prediction goes out of safe range
   const predAlert = predictions.some(
     p => p.predictedTemp < 2 || p.predictedTemp > 6
   );
 
+  const latest = history.length > 0
+    ? history.reduce((a, b) =>
+        new Date(a.createdAt) > new Date(b.createdAt) ? a : b)
+    : null;
+
   return (
-    <div style={{ padding: 10 }}>
+    <div style={{ padding: "10px 16px" }}>
       {error && <p style={{ color: "red" }}>{error}</p>}
 
-      {/* 🔴 / 🟢 CURRENT ALERT BOX */}
-      {hasAlert ? (
+      {/* ── ALERT BOXES ── */}
+      <div style={{ display: "flex", gap: "10px", marginTop: "20px", marginBottom: "10px", flexWrap: "wrap" }}>
+        {/* Current temp alert */}
         <div style={{
-          backgroundColor: "#f8d7da", color: "#721c24",
-          padding: "12px", borderRadius: "6px",
-          marginTop: "30px", marginBottom: "10px", fontWeight: "bold"
+          flex: 1, minWidth: "200px",
+          backgroundColor: hasAlert ? "#f8d7da" : "#d4edda",
+          color: hasAlert ? "#721c24" : "#155724",
+          padding: "10px 14px", borderRadius: "6px", fontWeight: "bold", fontSize: "14px"
         }}>
-          🚨 ALERT: Latest temperature is OUT of safe range (2–6 °C)
+          {hasAlert
+            ? "🚨 ALERT: Temp OUT of safe range (2–6°C)"
+            : "✅ Temp is within safe range (2–6°C)"}
         </div>
-      ) : (
-        <div style={{
-          backgroundColor: "#d4edda", color: "#155724",
-          padding: "12px", borderRadius: "6px",
-          marginBottom: "15px", marginTop: "30px", fontWeight: "bold"
-        }}>
-          ✅ Latest temperature is within safe range
-        </div>
-      )}
 
-      {/* 🔮 PREDICTION ALERT BOX */}
-      {predictions.length > 0 && (
-        predAlert ? (
+        {/* Prediction alert */}
+        {predictions.length > 0 && (
           <div style={{
-            backgroundColor: "#fff3cd", color: "#856404",
-            padding: "12px", borderRadius: "6px",
-            marginBottom: "15px", fontWeight: "bold"
+            flex: 1, minWidth: "200px",
+            backgroundColor: predAlert ? "#fff3cd" : "#cce5ff",
+            color: predAlert ? "#856404" : "#004085",
+            padding: "10px 14px", borderRadius: "6px", fontWeight: "bold", fontSize: "14px"
           }}>
-            ⚠️ WARNING: Temperature predicted to leave safe range in next 5 minutes!
+            {predAlert
+              ? "⚠️ WARNING: Temp predicted to leave safe range in 5 min!"
+              : "🔮 Prediction: Temp stable in safe range for next 5 min"}
           </div>
-        ) : (
-          <div style={{
-            backgroundColor: "#cce5ff", color: "#004085",
-            padding: "12px", borderRadius: "6px",
-            marginBottom: "15px", fontWeight: "bold"
-          }}>
-             Prediction: Temperature expected to stay in safe range for next 5 minutes
-          </div>
-        )
-      )}
-
-      {/* 🔽 SENSOR SUMMARY */}
-      {history.length > 0 && (() => {
-        const latest = history.reduce((latest, item) =>
-          new Date(item.createdAt) > new Date(latest.createdAt) ? item : latest
-        );
-
-        return (
-          <div className="bg-white p-4 rounded-lg shadow-md text-center mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 text-gray-800">
-            <div>
-              <p className="text-lg text-gray-600">Temp In</p>
-              <p className="text-3xl font-medium">
-                {latest.tempInside} <span className="text-lg">°C</span>
-              </p>
-            </div>
-
-            <div>
-              <p className="text-lg text-gray-600">Temp Out</p>
-              <p className="text-3xl font-medium">
-                {latest.tempOutside} <span className="text-lg">°C</span>
-              </p>
-            </div>
-
-            <div>
-              <p className="text-lg text-gray-600">Humidity Inside</p>
-              <p className="text-3xl font-medium">
-                {latest.humidityInside} <span className="text-lg">%</span>
-              </p>
-            </div>
-
-            <div>
-              <p className="text-lg text-gray-600">Humidity Outside</p>
-              <p className="text-3xl font-medium">
-                {latest.humidityOutside} <span className="text-lg">%</span>
-              </p>
-            </div>
-
-            <div>
-              <p className="text-lg text-gray-600">Latitude</p>
-              <p className="text-3xl font-medium">
-                {latest.location?.latitude ?? "0.000000"}°
-              </p>
-            </div>
-
-            <div>
-              <p className="text-lg text-gray-600">Longitude</p>
-              <p className="text-3xl font-medium">
-                {latest.location?.longitude ?? "0.000000"}°
-              </p>
-            </div>
-
-            {/* ✅ Now uses actual prediction data */}
-            <div>
-              <p className="text-lg text-gray-600">Predicted Temp (+5 min)</p>
-              <p className="text-3xl font-medium"
-                style={{ color: predAt5Min && (predAt5Min < 2 || predAt5Min > 6) ? "#dc3545" : "#155724" }}>
-                {predAt5Min !== null ? `${predAt5Min}°C` : "—"}
-              </p>
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* 📈 TEMPERATURE HISTORY GRAPH */}
-      <div style={{ height: "400px", marginTop: "40px" }}>
-        <TempChart history={history} />
+        )}
       </div>
 
-      {/* 🔮 PREDICTION CHART */}
-      {predictions.length > 0 && (
+      {/* ── COMPACT SENSOR CARDS ── */}
+      {latest && (
         <div style={{
-          marginTop: "40px",
-          backgroundColor: "#fff",
-          borderRadius: "8px",
-          padding: "20px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+          display: "grid",
+          gridTemplateColumns: "repeat(7, 1fr)",
+          gap: "8px",
+          marginBottom: "16px"
         }}>
-          <h3 style={{ marginBottom: "4px" }}>
-            🔮 Temperature Forecast — Next 5 Minutes
-          </h3>
-          <p style={{ color: "#888", fontSize: "14px", marginBottom: "16px" }}>
-            Current Temp: <strong>{currentPredTemp}°C</strong>
-            &nbsp;|&nbsp;
-            Predicted at +5min: <strong
-              style={{ color: predAt5Min && (predAt5Min < 2 || predAt5Min > 6) ? "#dc3545" : "#28a745" }}>
-              {predAt5Min}°C
-            </strong>
-          </p>
-
-          <ResponsiveContainer width="100%" height={300}>
-            <LineChart data={predictions}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis
-                dataKey="label"
-                interval={4}
-                label={{ value: "Time Ahead", position: "insideBottom", offset: -2 }}
-              />
-              <YAxis
-                domain={["auto", "auto"]}
-                label={{ value: "Temp (°C)", angle: -90, position: "insideLeft" }}
-              />
-              <Tooltip formatter={(val) => [`${val}°C`, "Predicted Temp"]} />
-              <Legend />
-              <ReferenceLine y={6} stroke="orange" strokeDasharray="4 4" label="Max (6°C)" />
-              <ReferenceLine y={2} stroke="orange" strokeDasharray="4 4" label="Min (2°C)" />
-              <Line
-                type="monotone"
-                dataKey="predictedTemp"
-                stroke="#e74c3c"
-                strokeWidth={2}
-                dot={false}
-                name="Predicted Temp"
-              />
-            </LineChart>
-          </ResponsiveContainer>
+          {[
+            { label: "Temp In",       value: `${latest.tempInside}°C` },
+            { label: "Temp Out",      value: `${latest.tempOutside}°C` },
+            { label: "Hum In",        value: `${latest.humidityInside}%` },
+            { label: "Hum Out",       value: `${latest.humidityOutside}%` },
+            { label: "Latitude",      value: `${latest.location?.latitude ?? "0.00"}°` },
+            { label: "Longitude",     value: `${latest.location?.longitude ?? "0.00"}°` },
+            {
+              label: "Pred (+5min)",
+              value: predAt5Min !== null ? `${predAt5Min}°C` : "—",
+              color: predAt5Min && (predAt5Min < 2 || predAt5Min > 6) ? "#dc3545" : "#155724"
+            },
+          ].map((card, i) => (
+            <div key={i} style={{
+              backgroundColor: "#fff",
+              borderRadius: "8px",
+              padding: "8px 6px",
+              textAlign: "center",
+              boxShadow: "0 1px 4px rgba(0,0,0,0.08)"
+            }}>
+              <p style={{ fontSize: "11px", color: "#888", margin: "0 0 4px" }}>{card.label}</p>
+              <p style={{ fontSize: "18px", fontWeight: "600", margin: 0, color: card.color || "#1a1a1a" }}>
+                {card.value}
+              </p>
+            </div>
+          ))}
         </div>
       )}
 
+      {/* ── BOTH GRAPHS SIDE BY SIDE ── */}
+      <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+
+        {/* LEFT — Temperature History */}
+        <div style={{
+          flex: 1,
+          backgroundColor: "#fff",
+          borderRadius: "8px",
+          padding: "16px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+        }}>
+          <h3 style={{ margin: "0 0 4px", fontSize: "15px" }}>📈 Temperature History</h3>
+          <p style={{ color: "#888", fontSize: "12px", margin: "0 0 12px" }}>
+            Current: <strong>{currentPredTemp}°C</strong>
+          </p>
+          <div style={{ height: "320px" }}>
+            <TempChart history={history} />
+          </div>
+        </div>
+
+        {/* RIGHT — Prediction Chart */}
+        <div style={{
+          flex: 1,
+          backgroundColor: "#fff",
+          borderRadius: "8px",
+          padding: "16px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+        }}>
+          <h3 style={{ margin: "0 0 4px", fontSize: "15px" }}>🔮 Temperature Forecast — Next 5 Min</h3>
+          <p style={{ color: "#888", fontSize: "12px", margin: "0 0 12px" }}>
+            Predicted at +5min:{" "}
+            <strong style={{ color: predAt5Min && (predAt5Min < 2 || predAt5Min > 6) ? "#dc3545" : "#28a745" }}>
+              {predAt5Min !== null ? `${predAt5Min}°C` : "—"}
+            </strong>
+          </p>
+          <div style={{ height: "320px" }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={predictions}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                <XAxis
+                  dataKey="label"
+                  interval={4}
+                  tick={{ fontSize: 11 }}
+                  label={{ value: "Time Ahead", position: "insideBottom", offset: -2, fontSize: 12 }}
+                />
+                <YAxis
+                  domain={["auto", "auto"]}
+                  tick={{ fontSize: 11 }}
+                  label={{ value: "Temp (°C)", angle: -90, position: "insideLeft", fontSize: 12 }}
+                />
+                <Tooltip formatter={(val) => [`${val}°C`, "Predicted Temp"]} />
+                <Legend wrapperStyle={{ fontSize: "12px" }} />
+                <ReferenceLine y={6} stroke="orange" strokeDasharray="4 4" label={{ value: "Max 6°C", fontSize: 11 }} />
+                <ReferenceLine y={2} stroke="orange" strokeDasharray="4 4" label={{ value: "Min 2°C", fontSize: 11 }} />
+                <Line
+                  type="monotone"
+                  dataKey="predictedTemp"
+                  stroke="#e74c3c"
+                  strokeWidth={2}
+                  dot={false}
+                  name="Predicted Temp"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+      </div>
     </div>
   );
 }
