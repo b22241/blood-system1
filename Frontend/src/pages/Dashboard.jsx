@@ -137,7 +137,7 @@ function Dashboard() {
       )}
 
       {/* ── BOTH GRAPHS SIDE BY SIDE ── */}
-      <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
 
         {/* LEFT — Temperature History */}
         <div style={{
