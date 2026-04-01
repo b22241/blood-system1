@@ -93,10 +93,9 @@ app.get("/history", async (req, res) => {
   }
 });
 
-// Predict next 5 minutes (30 horizons × 10sec = 300sec)
+// Predict next 5 minutes (30 horizons × 10sec = 300seccod)
 app.get("/predict", async (req, res) => {
   try {
-    // Get last 5 readings from MongoDB
     const data = await SensorData.find()
       .sort({ createdAt: -1 })
       .limit(5);
@@ -105,14 +104,11 @@ app.get("/predict", async (req, res) => {
       return res.status(400).json({ error: "Not enough data to predict" });
     }
 
-    // Reverse to get chronological order (oldest → newest)
     data.reverse();
 
-    // Extract temperatures
     const rawTemps = data.map(d => d.tempInside);
     const rawHums  = data.map(d => d.humidityInside);
 
-    // Rolling mean smoothing (window=3) — same as Python code
     const smooth = (arr, window) =>
       arr.map((_, i) => {
         const slice = arr.slice(Math.max(0, i - window + 1), i + 1);
@@ -122,7 +118,6 @@ app.get("/predict", async (req, res) => {
     const smoothedTemps = smooth(rawTemps, 3);
     const smoothedHums  = smooth(rawHums, 5);
 
-    // Current and previous smoothed values
     const currTemp = smoothedTemps[smoothedTemps.length - 1];
     const prevTemp = smoothedTemps[smoothedTemps.length - 2];
     const diffTemp = currTemp - prevTemp;
@@ -131,13 +126,12 @@ app.get("/predict", async (req, res) => {
     const prevHum = smoothedHums[smoothedHums.length - 2];
     const diffHum = currHum - prevHum;
 
-    // Generate predictions for next 30 horizons (5 minutes)
     const predictions = [];
-    for (let h = 1; h <= 31; h++) {
+    for (let h = 1; h <= 30; h++) {
       predictions.push({
         horizon:       h,
         seconds:       h * 10,
-        label:         `+${(h * 10)}s`,
+        label:         `+${h * 10}s`,
         predictedTemp: parseFloat((currTemp + diffTemp * h).toFixed(2)),
         predictedHum:  parseFloat((currHum  + diffHum  * h).toFixed(2)),
       });
