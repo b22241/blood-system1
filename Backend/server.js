@@ -128,14 +128,21 @@ app.get("/predict", async (req, res) => {
     const smoothedHums  = smooth(rawHums, 5);
 
     // Step 6: Calculate derivative (rate of change per 10 seconds)
-    // diff = current - previous = how much it changed in last 10 seconds
-    const currTemp = smoothedTemps[smoothedTemps.length - 1]; // °C
-    const prevTemp = smoothedTemps[smoothedTemps.length - 2]; // °C
-    const diffTemp = currTemp - prevTemp; // °C per 10 seconds
+    const currTemp = smoothedTemps[smoothedTemps.length - 1];
+    const currHum  = smoothedHums[smoothedHums.length - 1];
 
-    const currHum = smoothedHums[smoothedHums.length - 1]; // % RH
-    const prevHum = smoothedHums[smoothedHums.length - 2]; // % RH
-    const diffHum = currHum - prevHum; // % RH per 10 seconds
+    // Calculate avg rate of change across all consecutive pairs
+    const tempDiffs = [];
+    const humDiffs  = [];
+
+    for (let i = 1; i < smoothedTemps.length; i++) {
+      tempDiffs.push(smoothedTemps[i] - smoothedTemps[i - 1]);
+      humDiffs.push(smoothedHums[i]   - smoothedHums[i - 1]);
+    }
+
+    // Average diff — much more stable than single diff
+    const diffTemp = tempDiffs.reduce((a, b) => a + b, 0) / tempDiffs.length;
+    const diffHum  = humDiffs.reduce((a, b) => a + b, 0)  / humDiffs.length;
 
     // Step 7: Generate 30 predictions (h=1 to h=30)
     // Formula: predicted = current + (rate_of_change × horizon)
