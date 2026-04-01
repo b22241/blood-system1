@@ -1,10 +1,19 @@
 import { useEffect, useState } from "react";
 import TempChart from "../components/TempChart";
 import {
-  LineChart, Line, XAxis, YAxis,
-  CartesianGrid, Tooltip, Legend,
-  ReferenceLine, ResponsiveContainer
-} from "recharts";
+  Chart as ChartJS,
+  LineElement, PointElement,
+  LinearScale, CategoryScale,
+  Tooltip, Legend
+} from "chart.js";
+import annotationPlugin from "chartjs-plugin-annotation";
+import { Line } from "react-chartjs-2";
+
+ChartJS.register(
+  LineElement, PointElement,
+  LinearScale, CategoryScale,
+  Tooltip, Legend, annotationPlugin
+);
 
 function Dashboard() {
   const [history, setHistory] = useState([]);
@@ -66,31 +75,92 @@ function Dashboard() {
         new Date(a.createdAt) > new Date(b.createdAt) ? a : b)
     : null;
 
+  // ── Chart.js prediction chart config ──
+  const predChartData = {
+    labels: predictions.map(p => p.label),
+    datasets: [
+      {
+        label: "Predicted Temp (°C)",
+        data: predictions.map(p => p.predictedTemp),
+        borderColor: "red",
+        backgroundColor: "rgba(255, 0, 0, 0.15)",
+        tension: 0.4,
+        pointRadius: predictions.map(p =>
+          p.predictedTemp < 2 || p.predictedTemp > 6 ? 6 : 3
+        ),
+        pointBackgroundColor: predictions.map(p =>
+          p.predictedTemp < 2 || p.predictedTemp > 6 ? "red" : "green"
+        ),
+      }
+    ]
+  };
+
+  const predChartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { position: "top" },
+      annotation: {
+        annotations: {
+          safeZone: {
+            type: "box",
+            yMin: 2,
+            yMax: 6,
+            backgroundColor: "rgba(0, 200, 0, 0.15)",
+            borderWidth: 0,
+            label: {
+              display: true,
+              content: "Safe Zone (2–6 °C)",
+              position: "center",
+              color: "green",
+              font: { weight: "bold" }
+            }
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        title: {
+          display: true,
+          text: "Time Ahead",
+          font: { weight: "bold", size: 22 }
+        }
+      },
+      y: {
+        title: {
+          display: true,
+          text: "Temperature (°C)",
+          font: { weight: "bold", size: 22 }
+        }
+      }
+    }
+  };
+
   return (
-    <div style={{ padding: "10px 16px" }}>
+    <div style={{ padding: "8px 12px" }}>
       {error && <p style={{ color: "red" }}>{error}</p>}
 
       {/* ── ALERT BOXES ── */}
-      <div style={{ display: "flex", gap: "10px", marginTop: "20px", marginBottom: "10px", flexWrap: "wrap" }}>
-        {/* Current temp alert */}
+      <div style={{ display: "flex", gap: "10px", marginTop: "10px", marginBottom: "8px", flexWrap: "wrap" }}>
         <div style={{
           flex: 1, minWidth: "200px",
           backgroundColor: hasAlert ? "#f8d7da" : "#d4edda",
           color: hasAlert ? "#721c24" : "#155724",
-          padding: "10px 14px", borderRadius: "6px", fontWeight: "bold", fontSize: "14px"
+          padding: "8px 14px", borderRadius: "6px",
+          fontWeight: "bold", fontSize: "14px"
         }}>
           {hasAlert
             ? "🚨 ALERT: Temp OUT of safe range (2–6°C)"
             : "✅ Temp is within safe range (2–6°C)"}
         </div>
-
-        {/* Prediction alert */}
         {predictions.length > 0 && (
           <div style={{
             flex: 1, minWidth: "200px",
             backgroundColor: predAlert ? "#fff3cd" : "#cce5ff",
             color: predAlert ? "#856404" : "#004085",
-            padding: "10px 14px", borderRadius: "6px", fontWeight: "bold", fontSize: "14px"
+            padding: "8px 14px", borderRadius: "6px",
+            fontWeight: "bold", fontSize: "14px"
           }}>
             {predAlert
               ? "⚠️ WARNING: Temp predicted to leave safe range in 5 min!"
@@ -104,31 +174,29 @@ function Dashboard() {
         <div style={{
           display: "grid",
           gridTemplateColumns: "repeat(7, 1fr)",
-          gap: "8px",
-          marginBottom: "16px"
+          gap: "8px", marginBottom: "10px"
         }}>
           {[
-            { label: "Temp In",       value: `${latest.tempInside}°C` },
-            { label: "Temp Out",      value: `${latest.tempOutside}°C` },
-            { label: "Hum In",        value: `${latest.humidityInside}%` },
-            { label: "Hum Out",       value: `${latest.humidityOutside}%` },
-            { label: "Latitude",      value: `${latest.location?.latitude ?? "0.00"}°` },
-            { label: "Longitude",     value: `${latest.location?.longitude ?? "0.00"}°` },
+            { label: "Temp In",     value: `${latest.tempInside}°C` },
+            { label: "Temp Out",    value: `${latest.tempOutside}°C` },
+            { label: "Hum In",      value: `${latest.humidityInside}%` },
+            { label: "Hum Out",     value: `${latest.humidityOutside}%` },
+            { label: "Latitude",    value: `${latest.location?.latitude ?? "0.00"}°` },
+            { label: "Longitude",   value: `${latest.location?.longitude ?? "0.00"}°` },
             {
               label: "Pred (+5min)",
               value: predAt5Min !== null ? `${predAt5Min}°C` : "—",
-              color: predAt5Min && (predAt5Min < 2 || predAt5Min > 6) ? "#dc3545" : "#155724"
+              color: predAt5Min && (predAt5Min < 2 || predAt5Min > 6)
+                ? "#dc3545" : "#155724"
             },
           ].map((card, i) => (
             <div key={i} style={{
-              backgroundColor: "#fff",
-              borderRadius: "8px",
-              padding: "8px 6px",
-              textAlign: "center",
+              backgroundColor: "#fff", borderRadius: "8px",
+              padding: "6px", textAlign: "center",
               boxShadow: "0 1px 4px rgba(0,0,0,0.08)"
             }}>
-              <p style={{ fontSize: "11px", color: "#888", margin: "0 0 4px" }}>{card.label}</p>
-              <p style={{ fontSize: "18px", fontWeight: "600", margin: 0, color: card.color || "#1a1a1a" }}>
+              <p style={{ fontSize: "11px", color: "#888", margin: "0 0 2px" }}>{card.label}</p>
+              <p style={{ fontSize: "17px", fontWeight: "600", margin: 0, color: card.color || "#1a1a1a" }}>
                 {card.value}
               </p>
             </div>
@@ -136,74 +204,41 @@ function Dashboard() {
         </div>
       )}
 
-      {/* ── BOTH GRAPHS SIDE BY SIDE ── */}
-      <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-
-        {/* LEFT — Temperature History */}
-        <div style={{
-          flex: 1,
-          backgroundColor: "#fff",
-          borderRadius: "8px",
-          padding: "16px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
-        }}>
-          <h3 style={{ margin: "0 0 4px", fontSize: "15px" }}>📈 Temperature History</h3>
-          <p style={{ color: "#888", fontSize: "12px", margin: "0 0 12px" }}>
-            Current: <strong>{currentPredTemp}°C</strong>
-          </p>
-          <div style={{ height: "320px" }}>
-            <TempChart history={history} />
-          </div>
+      {/* ── TEMPERATURE HISTORY GRAPH ── */}
+      <div style={{
+        backgroundColor: "#fff", borderRadius: "8px",
+        padding: "12px 16px", marginBottom: "12px",
+        boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
+      }}>
+        <h3 style={{ margin: "0 0 2px", fontSize: "15px" }}>📈 Temperature History</h3>
+        <p style={{ color: "#888", fontSize: "12px", margin: "0 0 8px" }}>
+          Current: <strong>{currentPredTemp}°C</strong>
+        </p>
+        <div style={{ height: "320px" }}>
+          <TempChart history={history} />
         </div>
+      </div>
 
-        {/* RIGHT — Prediction Chart */}
+      {/* ── PREDICTION GRAPH ── */}
+      {predictions.length > 0 && (
         <div style={{
-          flex: 1,
-          backgroundColor: "#fff",
-          borderRadius: "8px",
-          padding: "16px",
+          backgroundColor: "#fff", borderRadius: "8px",
+          padding: "12px 16px", marginBottom: "12px",
           boxShadow: "0 2px 8px rgba(0,0,0,0.08)"
         }}>
-          <h3 style={{ margin: "0 0 4px", fontSize: "15px" }}>🔮 Temperature Forecast — Next 5 Min</h3>
-          <p style={{ color: "#888", fontSize: "12px", margin: "0 0 12px" }}>
+          <h3 style={{ margin: "0 0 2px", fontSize: "15px" }}>🔮 Temperature Forecast — Next 5 Min</h3>
+          <p style={{ color: "#888", fontSize: "12px", margin: "0 0 8px" }}>
             Predicted at +5min:{" "}
             <strong style={{ color: predAt5Min && (predAt5Min < 2 || predAt5Min > 6) ? "#dc3545" : "#28a745" }}>
               {predAt5Min !== null ? `${predAt5Min}°C` : "—"}
             </strong>
           </p>
           <div style={{ height: "320px" }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={predictions}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis
-                  dataKey="label"
-                  interval={4}
-                  tick={{ fontSize: 11 }}
-                  label={{ value: "Time Ahead", position: "insideBottom", offset: -2, fontSize: 12 }}
-                />
-                <YAxis
-                  domain={["auto", "auto"]}
-                  tick={{ fontSize: 11 }}
-                  label={{ value: "Temp (°C)", angle: -90, position: "insideLeft", fontSize: 12 }}
-                />
-                <Tooltip formatter={(val) => [`${val}°C`, "Predicted Temp"]} />
-                <Legend wrapperStyle={{ fontSize: "12px" }} />
-                <ReferenceLine y={6} stroke="orange" strokeDasharray="4 4" label={{ value: "Max 6°C", fontSize: 11 }} />
-                <ReferenceLine y={2} stroke="orange" strokeDasharray="4 4" label={{ value: "Min 2°C", fontSize: 11 }} />
-                <Line
-                  type="monotone"
-                  dataKey="predictedTemp"
-                  stroke="#e74c3c"
-                  strokeWidth={2}
-                  dot={false}
-                  name="Predicted Temp"
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            <Line data={predChartData} options={predChartOptions} />
           </div>
         </div>
+      )}
 
-      </div>
     </div>
   );
 }
